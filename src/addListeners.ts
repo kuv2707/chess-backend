@@ -2,7 +2,7 @@ import * as SocketIO from "socket.io";
 
 type ChatMessage = {
 	message: string;
-	user: string;
+	user: User;
 	timestamp: Date;
 };
 type User = {
@@ -25,8 +25,8 @@ export default function addListeners(socket: SocketIO.Socket) {
         console.log(data)
         socket.broadcast.emit("message",{
             message:data,
-            user:socket_user_map.get(socket.id)?.displayName,
+            user:socket_user_map.get(socket.id),
             timestamp:new Date()
-        })
+        } as ChatMessage)
     })
 }
