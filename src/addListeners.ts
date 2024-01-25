@@ -1,32 +1,47 @@
 import * as SocketIO from "socket.io";
-
+import { User } from "../globals";
+import { fbAuth } from "./firebase";
+import UserModel from "./models/userModel";
 type ChatMessage = {
 	message: string;
 	user: User;
 	timestamp: Date;
 };
-type User = {
-	email: string;
-	displayName: string;
-	photoURL: string;
-	uid: string;
-};
-const socket_user_map: Map<string, User> = new Map();
+
 export default function addListeners(socket: SocketIO.Socket) {
-    console.log("new connection");
-    socket.on("disconnect", () => {
-        console.log("disconnected")
-        socket_user_map.delete(socket.id)
-    });
-    socket.on("login",(data:User)=>{
-        socket_user_map.set(socket.id,data)
-    })
-    socket.on("message",(data)=>{
-        console.log(data)
-        socket.broadcast.emit("message",{
-            message:data,
-            user:socket_user_map.get(socket.id),
-            timestamp:new Date()
-        } as ChatMessage)
-    })
+	console.log("new connection");
+	socket.on("disconnect", () => {
+		console.log("disconnected");
+	});
+	socket.on("login", (data: User) => {
+		fbAuth
+			.verifyIdToken(data.idToken)
+			.then(async (decodedToken) => {
+				console.log(decodedToken);
+				let user = await UserModel.findOne({
+					firebaseId: decodedToken.uid,
+				});
+				if (!user) {
+					user = new UserModel({
+						firebaseId: decodedToken.uid,
+						name: decodedToken.name,
+						email: decodedToken.email,
+						age: 0,
+					});
+					user = await user.save();
+				} else {
+					user.socketId = socket.id;
+					user = await user.save();
+				}
+			})
+			.catch((error) => {});
+	});
+	socket.on("message", (data) => {
+		console.log(data);
+		socket.broadcast.emit("message", {
+			message: data,
+			user: {},
+			timestamp: new Date(),
+		} as ChatMessage);
+	});
 }

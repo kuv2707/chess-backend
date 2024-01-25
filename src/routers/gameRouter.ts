@@ -1,8 +1,13 @@
 import Express from "express";
-import { newGame } from "../controllers/gameController";
+import { PiecewiseMoves, joinGame, newGame } from "../controllers/gameController";
+import { authenticateUserMiddleware } from "../controllers/authController";
 const router = Express.Router();
 
-router.post("/newgame", newGame);
+router.use(authenticateUserMiddleware)
+
+router.get("/newgame", newGame);
+router.post("/joingame", joinGame)
+router.post("/piecewisemoves",PiecewiseMoves)
 
 
 export default router;

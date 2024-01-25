@@ -22,6 +22,14 @@ const gameSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    chat: [{
+        message: String,
+        uid: String,
+        timestamp: {
+            type: Date,
+            default: Date.now
+        }
+    }]//put an upper cap on messages stored
 });
 
 const GameModel = mongoose.model("Game", gameSchema);

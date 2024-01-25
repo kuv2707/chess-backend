@@ -1,9 +1,9 @@
-import app from "./app";
 import dotenv from "dotenv";
+dotenv.config();
+import app from "./app";
 import mongoose from "mongoose";
 import SocketIO from "socket.io";
 import addListeners from "./addListeners";
-dotenv.config();
 
 mongoose
 	.connect(process.env.MONGODB_DATABASE_URI!)
@@ -30,6 +30,10 @@ sio.on("connection", (socket) => {
 	addListeners(socket);
 	
 });
+
+export {
+	sio
+}
 
 process.on("uncaughtException", (err) => {
 	console.log(err);
