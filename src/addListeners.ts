@@ -14,6 +14,7 @@ export default function addListeners(socket: SocketIO.Socket) {
 		console.log("disconnected");
 	});
 	socket.on("login", (data: User) => {
+		console.log("login", data)
 		fbAuth
 			.verifyIdToken(data.idToken)
 			.then(async (decodedToken) => {

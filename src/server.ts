@@ -22,7 +22,7 @@ const server = app.listen(process.env.PORT, () => {
 
 const sio = new SocketIO.Server(server,{
 	cors:{
-		origin:"http://localhost:3000",
+		origin:"*",
 	}
 });
 sio.on("connection", (socket) => {
