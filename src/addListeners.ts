@@ -30,11 +30,13 @@ export default function addListeners(socket: SocketIO.Socket) {
 					});
 					user = await user.save();
 				} else {
-					user.socketId = socket.id;
 					user = await user.save();
 				}
+				user.socketId = socket.id;
 			})
-			.catch((error) => {});
+			.catch((error) => {
+				console.log("socket connection failed", error);
+			});
 	});
 	socket.on("message", (data) => {
 		console.log(data);
