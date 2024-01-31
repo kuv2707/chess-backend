@@ -29,11 +29,9 @@ export default function addListeners(socket: SocketIO.Socket) {
 						email: decodedToken.email,
 						age: 0,
 					});
-					user = await user.save();
-				} else {
-					user = await user.save();
 				}
 				user.socketId = socket.id;
+				user = await user.save();
 			})
 			.catch((error) => {
 				console.log("socket connection failed", error);
