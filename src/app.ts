@@ -26,5 +26,5 @@ app.use(Express.json({ limit: "10kb" }));
 app.use(Express.urlencoded({ extended: true, limit: "10kb" }));
 
 app.use("/api/v1/game",gameRouter)
-app.use("/api/v1/authenticate", authRouter)
+app.use("/api/v1/auth", authRouter)
 app.use("/api/v1/chat", chatRouter)

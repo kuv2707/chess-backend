@@ -1,7 +1,44 @@
 import UserModel from "../models/userModel";
 import { NextFunction, Request, Response } from "express";
-import { getAuth } from "firebase-admin/auth";
 import { fbAuth } from "../firebase";
+
+export function login(req: Request, res: Response) {
+	const { token } = req.body;
+	if (!token) {
+		res.status(401).json({
+			status: "fail",
+			message: "auth failed: provide an ID Token!",
+		});
+		return;
+	}
+	fbAuth
+		.verifyIdToken(token)
+		.then(async (authUserInfo) => {
+			let dbuser = await UserModel.findOne({ firebaseId: authUserInfo.uid });
+			if (!dbuser) {
+				dbuser = new UserModel({
+					firebaseId: authUserInfo.uid,
+					name: authUserInfo.name,
+					email: authUserInfo.email,
+					photoURL: authUserInfo.picture,
+					age: 0,
+				});
+			}
+			dbuser.save();
+			res.status(200).json({
+				status: "success",
+				data: {
+					user: dbuser,
+				},
+			})
+		})
+		.catch((error) => {
+			res.json({
+				status: "fail",
+				message: "auth failed:" + error.message,
+			});
+		});
+}
 
 export function authenticateUserMiddleware(
 	req: Request,
@@ -10,7 +47,7 @@ export function authenticateUserMiddleware(
 ) {
 	const idToken = req.headers.authorization?.split(" ")[1] ?? "";
 	if (!idToken) {
-		res.status(500).json({
+		res.status(401).json({
 			status: "fail",
 			message: "auth failed: provide an ID Token!",
 		});
@@ -19,20 +56,15 @@ export function authenticateUserMiddleware(
 	fbAuth
 		.verifyIdToken(idToken)
 		.then(async(decodedToken) => {
-			// console.log("deco", decodedToken);
 			const uid = decodedToken.uid;
-			req.body.user = decodedToken;
 			let dbuser = await UserModel.findOne({ firebaseId: uid });
 			if (!dbuser) {
-				dbuser = new UserModel({
-					firebaseId: uid,
-					name: decodedToken.name,
-					email: decodedToken.email,
-					age: 0,//todo
+				res.status(401).json({
+					status: "fail",
+					message: "auth failed: user not found",
 				});
-				dbuser.save();
 			}
-			req.body.dbuser = dbuser;
+			req.body.user = dbuser;
 			next();
 		})
 		.catch((error) => {

@@ -1,6 +1,12 @@
 import { Request, Response } from "express";
 import GameModel from "../models/gameModel";
 import { sio } from "../server";
+
+type ChatMessage = {
+	message: string;
+	userId: string;
+	timestamp: Date;
+};
 export async function postMessage(req: Request, res: Response) {
 	const { message, gameId, user } = req.body;
 	const game = await GameModel.findOne({ _id: gameId });
@@ -11,12 +17,14 @@ export async function postMessage(req: Request, res: Response) {
 		});
 		return;
 	}
-	game.chat.push({ message, uid: user.uid });
-	await game.save();
-	sio.to(gameId).emit("message", { message,user, timestamp: Date.now() });
+	sio.to(gameId).emit("message", {
+		message,
+		userId: user._id,
+		timestamp: new Date(),
+	} as ChatMessage);
 	sio.sockets.adapter.rooms.get(gameId)?.forEach((socketId) => {
-		console.log(">",socketId);
+		console.log(">", socketId);
 	});
 
-	res.send("ok");
+	res.status(200).send("message sent");
 }

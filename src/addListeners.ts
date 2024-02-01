@@ -9,40 +9,25 @@ type ChatMessage = {
 };
 
 export default function addListeners(socket: SocketIO.Socket) {
-	console.log("new connection");
+	const token = socket.handshake.auth.token;
+	fbAuth
+		.verifyIdToken(token)
+		.then(async (verifiedUser) => {
+			let user = await UserModel.findOne({
+				firebaseId: verifiedUser.uid,
+			});
+			if (!user) {
+				//wont happen though
+				return;
+			}
+			user.socketId = socket.id;
+			user = await user.save();
+		})
+		.catch((error) => {
+			console.log("socket connection failed", error);
+		});
 	socket.on("disconnect", () => {
 		console.log("disconnected");
 	});
-	socket.on("login", (data: User) => {
-		console.log("login", data)
-		fbAuth
-			.verifyIdToken(data.idToken)
-			.then(async (decodedToken) => {
-				console.log(decodedToken);
-				let user = await UserModel.findOne({
-					firebaseId: decodedToken.uid,
-				});
-				if (!user) {
-					user = new UserModel({
-						firebaseId: decodedToken.uid,
-						name: decodedToken.name,
-						email: decodedToken.email,
-						age: 0,
-					});
-				}
-				user.socketId = socket.id;
-				user = await user.save();
-			})
-			.catch((error) => {
-				console.log("socket connection failed", error);
-			});
-	});
-	socket.on("message", (data) => {
-		console.log(data);
-		socket.broadcast.emit("message", {
-			message: data,
-			user: {},
-			timestamp: new Date(),
-		} as ChatMessage);
-	});
+
 }

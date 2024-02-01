@@ -3,12 +3,30 @@ import GameModel from "../models/gameModel";
 import { sio } from "../server";
 import UserModel from "../models/userModel";
 
+export async function getGame(req: Request, res: Response) {
+	const { id } = req.params;
+	const game = await GameModel.findById(id).populate("players");
+	if (!game) {
+		res.status(404).json({
+			status: "fail",
+			message: "Game not found",
+		});
+		return;
+	}
+	res.status(200).json({
+		status: "success",
+		data: {
+			game,
+		},
+	});
+}
+
 export async function newGame(req: Request, res: Response) {
-	const { name, user, dbuser } = req.body;
+	const { name, user } = req.body;
 	let game = new GameModel({ name });
-	game.players.push(req.body.user.uid);
+	game.players.push(user._id);
 	game = await game.save();
-	sio.sockets.sockets.get(dbuser.socketId)?.join(game.id);
+	sio.sockets.sockets.get(user.socketId)?.join(game.id);
 	res.status(201).json({
 		status: "success",
 		data: {
@@ -20,8 +38,9 @@ export async function newGame(req: Request, res: Response) {
 GameModel.deleteMany({}).then(() => {
 	console.log("deleted all games");
 });
+
 export async function joinGame(req: Request, res: Response) {
-	const { gameId, dbuser } = req.body;
+	const { gameId, user } = req.body;
 	const game = await GameModel.findById(gameId);
 	if (!game) {
 		res.status(400).json({
@@ -30,9 +49,7 @@ export async function joinGame(req: Request, res: Response) {
 		});
 		return;
 	}
-	const host = await UserModel.findOne({
-		firebaseId: game.players[0],
-	});
+	const host = await UserModel.findById(game.players[0]);
 	if (!host) {
 		res.status(400).json({
 			status: "fail",
@@ -56,9 +73,9 @@ export async function joinGame(req: Request, res: Response) {
 		});
 		return;
 	}
-	game.players.push(req.body.user.uid);
+	game.players.push(user._id);
 	await game.save();
-	sio.sockets.sockets.get(dbuser.socketId)?.join(game.id);
+	sio.sockets.sockets.get(user.socketId)?.join(game.id);
 	sio.to(game.id).emit("opponentJoined", {
 		gameInfo: {
 			gameId: game._id,
@@ -70,8 +87,9 @@ export async function joinGame(req: Request, res: Response) {
 }
 
 export async function makeMove(req: Request, res: Response) {
-	const { gameId, move, dbuser } = req.body;
-	console.log("makemove",gameId,move)
+	//todo: check if user is allowed to make move based on its color
+	const { gameId, move } = req.body;
+	console.log("makemove", gameId, move);
 	if (!gameId || !move) {
 		res.status(400).json({
 			status: "fail",
