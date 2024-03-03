@@ -23,10 +23,21 @@ export async function getGame(req: Request, res: Response) {
 
 export async function newGame(req: Request, res: Response) {
 	const { name, user } = req.body;
-	let game = new GameModel({ name });
+	const { type } = req.params;
+	let game = new GameModel({ name, type });
+	game.players.push(user._id);
 	game.players.push(user._id);
 	game = await game.save();
 	sio.sockets.sockets.get(user.socketId)?.join(game.id);
+	if (game.type == "engine") {
+		sio.to(game.id).emit("opponentJoined", {
+			gameInfo: {
+				gameId: game._id,
+				player1: game.players[0],
+				player2: game.players[1],
+			},
+		});
+	}
 	res.status(201).json({
 		status: "success",
 		data: {
@@ -105,6 +116,7 @@ export async function makeMove(req: Request, res: Response) {
 		});
 		return;
 	}
+	console.log("makemove", move);
 	let moveres = await fetch(
 		process.env.NEXT_PUBLIC_CHESS_ENGINE_URL + "makemove",
 		{
@@ -126,14 +138,44 @@ export async function makeMove(req: Request, res: Response) {
 		return;
 	}
 	let newfen = await moveres.text();
-	game.fenstring = newfen;
-	await game.save();
-	console.log(newfen);
 	sio.to(game.id).emit("boardUpdate", {
 		fenstring: newfen,
 	});
+	game.fenstring = newfen;
+	await game.save();
+	async function enginePostMove(newfen:string) {
+		if(game==null)
+		return console.log("null game!!!");
+		game.fenstring = newfen;
+		await game.save();
+		sio.to(game.id).emit("boardUpdate", {
+			fenstring: newfen,
+		});
+	}
+	if (game.type == "engine") {
+		makeEngineMove(newfen).then(enginePostMove);
+	}
+	res.status(200).json({
+		status: "success",
+	});
+	
+	
 }
-
+async function makeEngineMove(newfen: string) {
+	let r = await fetch(
+		process.env.NEXT_PUBLIC_CHESS_ENGINE_URL + "stockfishmakemove",
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				fen: newfen,
+			}),
+		}
+	).then((res) => res.text());
+	return r;
+}
 export async function PiecewiseMoves(req: Request, res: Response) {
 	await fetch(process.env.NEXT_PUBLIC_CHESS_ENGINE_URL + "piecewisemoves", {
 		method: "POST",

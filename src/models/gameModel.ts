@@ -15,6 +15,12 @@ const gameSchema = new mongoose.Schema({
 		type: String,
 		default: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w",
 	},
+	type: {
+		type: String,
+		enum: ["2player", "engine"],
+		default: "2player",
+	
+	},
 	status: {
 		type: String,
 		enum: ["scheduled", "in progress", "finished"],

@@ -5,7 +5,7 @@ const router = Express.Router();
 
 router.use(authenticateUserMiddleware)
 
-router.get("/newgame", newGame);
+router.get("/newgame/:type", newGame);
 router.post("/joingame", joinGame)
 router.post("/piecewisemoves",PiecewiseMoves)
 router.post("/makemove",makeMove)
